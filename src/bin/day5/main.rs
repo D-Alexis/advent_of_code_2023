@@ -1,15 +1,18 @@
+use std::collections::HashSet;
 use std::time::Instant;
 
 fn main() {
-    let input = include_str!("input_test.txt");
+    let input = include_str!("input.txt");
     let start = Instant::now();
     let input_info = InputInfo::parse_input(input);
     println!("parsing took : {:?}", start.elapsed());
 
-  /*  let start = Instant::now();
+    /*
+   let start = Instant::now();
     day1(&input_info);
     println!("day1 took : {:?}", start.elapsed());
 */
+
    let start = Instant::now();
     day2(&input_info);
     println!("day2 took : {:?}", start.elapsed());
@@ -25,8 +28,9 @@ fn day1(input_info : &InputInfo) {
     });
     println!("{:?}", source.iter().min().unwrap());
 }
-fn find_all_next(sources: &Vec<u64>, map_info: &MapInfo) -> Vec<u64>{
-    let mut res :Vec<u64> = Vec::with_capacity(sources.len());
+
+fn find_all_next(sources: &Vec<i64>, map_info: &MapInfo) -> Vec<i64>{
+    let mut res :Vec<i64> = Vec::with_capacity(sources.len());
     for source in sources {
         let mut dest = source.clone();
         for range_info in &map_info.numbers_info {
@@ -41,36 +45,49 @@ fn find_all_next(sources: &Vec<u64>, map_info: &MapInfo) -> Vec<u64>{
 }
 
 fn day2(input_info : &InputInfo) {
-    let (seed_start, seed_end) : (u64, u64) = (79, 92);
-    let init = RangeInfo {
-        dest_min: seed_start,
-        dest_max: seed_end,
-        source_min: seed_start,
-        source_max: seed_end,
-        range: seed_end-seed_start
-    };
-
+    let all_seed_range = &input_info.seed_range;
 
     let mut iter= input_info.map_infos.iter();
-    let mut result_end_map = iter.next().unwrap();
-    result_end_map.numbers_info.iter().for_each(|number_info| {
-       let new_vec = compute_intersection(&init,number_info);
-
-       println!("{:?} and {:?}",number_info, new_vec);
-    });
+    let mut current_map = iter.next().unwrap();
 
 
+
+    let min = all_seed_range.iter().map(|init| {
+        let mut current : HashSet<(i64, i64)> = HashSet::with_capacity(1000);
+        let mut next : HashSet<(i64, i64)> = HashSet::with_capacity(1000);
+        current.insert(*init);
+        input_info.map_infos.iter().for_each(|current_map|{
+            // START parcours des mapping
+            current_map.numbers_info.iter().for_each(|number_info| {
+                // parcours des ligne du mapping
+                current.iter().for_each(|current_seed_range| {
+                    compute_intersection(*current_seed_range,number_info, &mut next);
+                });
+            });
+            // END parcours d'un mapping
+            if next.len() != 0 {
+                current = next.clone();
+                next.clear();
+            }
+
+            let minn = *current.iter().map(|(min, max)| min).min().unwrap();
+        });
+        let minn = *current.iter().map(|(min, max)| min).min().unwrap();
+        println!("{:?}",minn);
+        minn
+    }).min().unwrap();
+    println!("{:?}",min);
   //  get_that_fucking_map(&input_info.map_infos);
 }
 
 
-fn compute_intersection(seed_range_info : &RangeInfo, next_step_range_info: &RangeInfo) -> Vec<RangeInfo> {
-    let mut seed_min = seed_range_info.dest_min;
-    let mut seed_max = seed_range_info.dest_max;
+fn compute_intersection(seed_range_info : (i64, i64), next_step_range_info: &RangeInfo, new_vec: &mut HashSet<(i64, i64)>) {
+    let mut seed_min = seed_range_info.0;
+    let mut seed_max = seed_range_info.1;
     let mut cur_min = next_step_range_info.source_min;
     let mut cur_max = next_step_range_info.source_max;
-    let mut res : Vec<RangeInfo> = Vec::with_capacity(100);
-    let  (mut inter_min, mut inter_max) = (u64::MAX, u64::MAX);
+    let  (mut inter_min, mut inter_max) = (i64::MAX, i64::MAX);
+    let diff = next_step_range_info.dest_min - next_step_range_info.source_min;
 
     if seed_min >= cur_min && seed_min <= cur_max {
         // case :
@@ -84,34 +101,19 @@ fn compute_intersection(seed_range_info : &RangeInfo, next_step_range_info: &Ran
             // -----
             //
             inter_max = seed_max;
-            res.push(RangeInfo {
-                dest_min: inter_min + (next_step_range_info.dest_min - next_step_range_info.source_min),
-                dest_max: inter_max + (next_step_range_info.dest_min - next_step_range_info.source_min),
-                source_min: seed_range_info.source_min,
-                source_max: seed_range_info.source_max,
-                range: 0,
-            })
+
+            new_vec.insert((inter_min + diff, inter_max + diff));
         } else {
             // case :
             //  -----
             // -----
             //
             inter_max = cur_max;
-            let (dest_min, dest_max) = get_min_max(next_step_range_info, inter_min, inter_max);
-            res.push(RangeInfo {
-                dest_min,
-                dest_max,
-                source_min: seed_range_info.source_min,
-                source_max: inter_max,
-                range: 0,
-            });
-            res.push(RangeInfo {
-                dest_min: inter_max+1,
-                dest_max: seed_range_info.dest_max,
-                source_min: inter_max+1,
-                source_max: seed_range_info.source_max,
-                range: 0,
-            })
+            new_vec.insert((inter_min + diff, inter_max + diff));
+            new_vec.insert((
+                inter_max+1,
+                seed_max)
+            );
         }
 
     } else if seed_max >= cur_min && seed_max <= cur_max {
@@ -126,21 +128,8 @@ fn compute_intersection(seed_range_info : &RangeInfo, next_step_range_info: &Ran
             //    ---
             //
             inter_min = cur_min;
-            let (dest_min, dest_max) = get_min_max(next_step_range_info, inter_min, inter_max);
-            res.push(RangeInfo {
-                dest_min,
-                dest_max,
-                source_min: inter_min,
-                source_max: seed_range_info.source_max,
-                range: 0,
-            });
-            res.push(RangeInfo {
-                dest_min: seed_range_info.dest_min,
-                dest_max: inter_min-1,
-                source_min: seed_range_info.source_min,
-                source_max: inter_min-1,
-                range: 0,
-            })
+            new_vec.insert((inter_min + diff, inter_max + diff));
+            new_vec.insert((seed_min, inter_min-1));
         } else {
             // case :
             //    ---
@@ -156,33 +145,13 @@ fn compute_intersection(seed_range_info : &RangeInfo, next_step_range_info: &Ran
         //
         inter_max = cur_max;
         inter_min = cur_min;
-        res.push(RangeInfo {
-            dest_min: seed_range_info.dest_min,
-            dest_max: inter_min-1,
-            source_min: seed_range_info.source_min,
-            source_max: inter_min-1,
-            range: 0,
-        });
-        let (dest_min, dest_max) = get_min_max(next_step_range_info, inter_min, inter_max);
-        res.push(RangeInfo {
-            dest_min,
-            dest_max,
-            source_min: inter_min,
-            source_max: inter_max,
-            range: 0,
-        });
-        res.push(RangeInfo {
-            dest_min: inter_max+1,
-            dest_max: seed_range_info.dest_max,
-            source_min: inter_max+1,
-            source_max: seed_range_info.source_max,
-            range: 0,
-        });
+        new_vec.insert(( seed_min, inter_min-1));
+        new_vec.insert((inter_min + diff, inter_max + diff));
+        new_vec.insert((inter_max+1, seed_max));
     }
-    res
 }
 
-fn get_min_max(next_step_range_info: &RangeInfo, inter_min:u64, inter_max:u64) -> (u64, u64) {
+fn get_min_max(next_step_range_info: &RangeInfo, inter_min:i64, inter_max:i64) -> (i64, i64) {
     let (dest_min, dest_max) = if next_step_range_info.dest_min > next_step_range_info.source_min {
         (inter_min + (next_step_range_info.dest_min - next_step_range_info.source_min),
          inter_max + (next_step_range_info.dest_min - next_step_range_info.source_min))
@@ -192,41 +161,11 @@ fn get_min_max(next_step_range_info: &RangeInfo, inter_min:u64, inter_max:u64) -
     };
     (dest_min, dest_max)
 }
-/*
-fn get_that_fucking_map(map_infos : &Vec<MapInfo>) {
-    let mut iter= map_infos.iter();
-    let mut result_end_map = iter.next().unwrap().numbers_info.clone();
-
-    // pour toutes les autres mapinfo, on va calculer l'ensemble des range toutDebut -> touteFin
-    iter.for_each(|map_info|  {
-
-        map_info.numbers_info.iter().for_each(|range_info| {
-            //on met à jour chaque range, et potentiellement on en écrit d'autres.
-            compute_info(&mut result_end_map, range_info);
-        });
-    });
-}
-*/
-/*
-fn compute_info(result_end_map: &mut Vec<RangeInfo>, range_info: &RangeInfo) {
-    let mut new_range_info: Vec<RangeInfo> = Vec::with_capacity(5);
-    result_end_map.iter_mut().for_each(|current_result_range| {
-        println!("current_res : {:?} ",current_result_range);
-        println!("range_info : {:?} ",range_info);
-        //update range
-        if let Some((inter_min, inter_max)) =  get_range_intersection((current_result_range.dest_min, current_result_range.dest_max),
-                                                                    (range_info.source_min, range_info.source_max)) {
-            println!("{inter_min} and {inter_max}");
-        } else {
-            println!("None");
-        }
-    });
-}
-*/
 
 #[derive(Debug)]
 struct InputInfo {
-    seeds: Vec<u64>,
+    seeds: Vec<i64>,
+    seed_range: Vec<(i64,i64)>,
     map_infos: Vec<MapInfo>
 }
 #[derive(Debug, Clone)]
@@ -237,24 +176,35 @@ struct MapInfo {
 }
 #[derive(Debug, Clone)]
 struct RangeInfo {
-    dest_min:u64,
-    dest_max:u64,
-    source_min:u64,
-    source_max:u64,
-    range: u64
+    dest_min:i64,
+    dest_max:i64,
+    source_min:i64,
+    source_max:i64,
+    range: i64
 }
 
 impl InputInfo {
     pub fn parse_input(input : &str) -> Self {
-       let (first, rest) =  input.split_once("\r\n\r\n").unwrap();
-        let seeds =  str_to_vec_u64(first.split_once(": ").unwrap().1);
+       let (first, rest) =  input.split_once("\n\n").unwrap();
+        let mut seeds =  Vec::with_capacity(20);//str_to_vec_i64(first.split_once(": ").unwrap().1);
+        let mut seed_range =  Vec::with_capacity(20);
+        let all = first.split_once(": ").unwrap().1;
+        all.split(",").for_each(|range| {
+            let (min, range) = range.split_once(":").unwrap();
+            let min = min.parse::<i64>().unwrap();
+            let range = range.parse::<i64>().unwrap();
+            let max = min + range;
+            seeds.push(min); seeds.push(range);
+            seed_range.push((min, max));
+        });
         //println!("{:?}", seeds);
-        let map_infos = rest.split("\r\n\r\n").map(|map_source_dest| MapInfo::parse_map(map_source_dest)).collect::<Vec<MapInfo>>();
+        let map_infos = rest.split("\n\n").map(|map_source_dest| MapInfo::parse_map(map_source_dest)).collect::<Vec<MapInfo>>();
         println!("{:?}", rest.lines().next().unwrap());
         //lines
         InputInfo{
-            seeds: seeds,
-            map_infos
+            seeds,
+            map_infos,
+            seed_range
         }
     }
 }
@@ -276,18 +226,18 @@ impl MapInfo {
 
 impl RangeInfo {
     pub fn parse_numbers(all_numbers: &str) -> Self{
-        let nums = str_to_vec_u64(all_numbers);
+        let nums = str_to_vec_i64(all_numbers);
         let range = nums[2];
 
         RangeInfo {
             source_min: nums[1],
-            source_max:nums[1] + (range -1),
+            source_max:nums[1] + (range - 1),
             dest_min: nums[0],
-            dest_max: nums[0] + (range -1),
+            dest_max: nums[0] + (range - 1),
             range
         }
     }
 }
-fn str_to_vec_u64(numbers : &str) -> Vec<u64> {
-    numbers.split(" ").map(|number| number.parse::<u64>().unwrap()).collect::<Vec<u64>>()
+fn str_to_vec_i64(numbers : &str) -> Vec<i64> {
+    numbers.split(" ").map(|number| number.parse::<i64>().unwrap()).collect::<Vec<i64>>()
 }
