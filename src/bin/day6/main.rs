@@ -9,18 +9,18 @@ fn main() {
 
 
    let start = Instant::now();
-    day1(&input_info);
+    part1(&input_info);
     println!("day1 took : {:?}", start.elapsed());
 
 
    let start = Instant::now();
-    day2(input);
+    part2_but_smart(input);
     println!("day2 took : {:?}", start.elapsed());
 
 
 }
 
-fn day1(input : &Vec<(u64, u64)>) {
+fn part1(input : &Vec<(u64, u64)>) {
     println!("{:?}", input);
 
     let a =  input.iter().map(|(time_max, record)| {
@@ -41,7 +41,7 @@ fn get_dist(time: u64, time_max: u64) -> u64 {
 }
 
 
-fn day2(input :  &str) {
+fn part2(input :  &str) {
     let (time, dest) = input.split_once("\r\n").unwrap();
     let time = str_to_u64(time);
     let dest = str_to_u64(dest);
@@ -54,6 +54,18 @@ fn day2(input :  &str) {
         }
     }
     println!("{number_way_win}");
+}
+
+fn part2_but_smart(input: &str) {
+    let (time, dest) = input.split_once("\r\n").unwrap();
+    let time = str_to_u64(time) as usize;
+    let dest = str_to_u64(dest) as usize;
+    println!("{time} and {dest}");
+
+    let x1 = ( (0- time) + f32::sqrt((time * time - 4 * dest) as f32) as usize) / 2;
+    let x2 = ( (0-time) - f32::sqrt((time * time - 4 * dest) as f32) as usize) / 2;
+    println!("{x1} and {x2}");
+    println!("{}", x1 - x2);
 }
 
 fn parse_input(input: &str) -> Vec<(u64, u64)> {
