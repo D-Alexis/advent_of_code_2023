@@ -9,7 +9,7 @@ fn main() {
     println!("day1 took : {:?}", start.elapsed());
 
     let start = Instant::now();
-     day2(input);
+    day2(input);
     println!("day2 took : {:?}", start.elapsed());
 }
 
@@ -33,7 +33,7 @@ fn day1(input: &str) {
             }
             let mut res = String::from(first);
             res.push(second);
-            return res.parse::<i32>().unwrap()
+            return res.parse::<i32>().unwrap();
         })
         .sum::<i32>();
 
@@ -50,18 +50,17 @@ fn day2(input: &str) {
         ("six", '6'),
         ("seven", '7'),
         ("eight", '8'),
-        ("nine", '9')
+        ("nine", '9'),
     ]);
     let total = input
         .lines()
-        .map(|line| {
-            find_in_line(line, &dict)
-        }).sum::<i32>();
+        .map(|line| find_in_line(line, &dict))
+        .sum::<i32>();
 
     println!("{:?}", total);
 }
 fn find_in_line(line: &str, dict: &HashMap<&str, char>) -> i32 {
-    let mut my_vec : Vec<(usize, char)> = Vec::with_capacity(20);
+    let mut my_vec: Vec<(usize, char)> = Vec::with_capacity(20);
     for c in '0'..='9' {
         if let Some(res) = find_that_char(line, c, false) {
             my_vec.push(res);
@@ -103,7 +102,12 @@ fn find_that_char(line: &str, curr: char, last: bool) -> Option<(usize, char)> {
     }
 }
 
-fn find_that_str(line: &str, curr: &str, last: bool, dict: &HashMap<&str, char>) -> Option<(usize, char)> {
+fn find_that_str(
+    line: &str,
+    curr: &str,
+    last: bool,
+    dict: &HashMap<&str, char>,
+) -> Option<(usize, char)> {
     if !last {
         if let Some(index) = line.find(curr) {
             Some((index, dict.get(curr).unwrap().clone()))
