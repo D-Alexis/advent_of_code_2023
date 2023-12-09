@@ -8,7 +8,6 @@ edition = "2021"
 [dependencies]
 num-integer = "0.1.45"
 
-
 [[bin]]
 name = "day1"
 path = "src/bin/day1/main.rs"
@@ -40,3 +39,7 @@ path = "src/bin/day7/main.rs"
 [[bin]]
 name = "day8"
 path = "src/bin/day8/main.rs"
+
+[[bin]]
+name = "day9"
+path = "src/bin/day9/main.rs"
